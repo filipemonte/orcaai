@@ -1,6 +1,25 @@
 <template>
   <div>
-    <div class="space-y-3">
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <p class="mt-2 text-gray-600">Carregando serviços...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+      <p class="text-red-800 font-medium">Erro ao carregar serviços</p>
+      <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+      <button 
+        @click="fetchServices" 
+        class="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+      >
+        Tentar novamente
+      </button>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else class="space-y-3">
       <div>
         <label class="block mb-2 text-sm font-medium text-gray-700">Selecione o serviço:</label>
         <select v-model="selectedId" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
@@ -120,9 +139,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { jsPDF } from "jspdf";
-import services from "../data/services.json";
+import { useServices } from '../composables/useServices';
+
+const { services, loading, error, fetchServices } = useServices();
 
 const selectedId = ref("");
 const qty = ref(0);
@@ -130,8 +151,12 @@ const difficulty = ref(1);
 const observation = ref("");
 const items = ref([]);
 
+onMounted(() => {
+  fetchServices();
+});
+
 const selectedService = computed(() =>
-  services.find((s) => s.id === selectedId.value)
+  services.value.find((s) => s.id === selectedId.value)
 );
 
 const difficultyMultiplier = computed(() => {
