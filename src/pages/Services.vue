@@ -19,7 +19,22 @@
 
     <!-- Error State -->
     <div v-if="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-      <strong>Erro:</strong> {{ error }}
+      <div class="flex justify-between items-center">
+        <div>
+          <strong>Erro:</strong> {{ error }}
+          <p v-if="error.includes('timeout')" class="text-sm mt-2">
+            Parece que o Redis não foi populado. Clique no botão ao lado para popular os dados.
+          </p>
+        </div>
+        <button 
+          v-if="error.includes('timeout') || services.length === 0"
+          @click="seedDatabase"
+          :disabled="seeding"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+        >
+          {{ seeding ? 'Populando...' : '🌱 Popular Dados' }}
+        </button>
+      </div>
     </div>
 
     <!-- Services Grid -->
@@ -55,9 +70,16 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="!loading && services.length === 0" class="text-center py-12">
+    <div v-if="!loading && services.length === 0 && !error" class="text-center py-12">
       <p class="text-gray-500 text-lg">Nenhum serviço cadastrado.</p>
       <p class="text-gray-400 text-sm mt-2">Clique em "Adicionar Serviço" para começar.</p>
+      <button 
+        @click="seedDatabase"
+        :disabled="seeding"
+        class="mt-4 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+      >
+        {{ seeding ? 'Populando...' : '🌱 Popular Dados Iniciais' }}
+      </button>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -161,6 +183,7 @@ const { services, loading, error, fetchServices, addService, updateService, dele
 const showAddModal = ref(false);
 const editingService = ref(null);
 const deletingService = ref(null);
+const seeding = ref(false);
 const formData = ref({
   name: '',
   unit: '',
@@ -170,6 +193,32 @@ const formData = ref({
 onMounted(() => {
   fetchServices();
 });
+
+const seedDatabase = async () => {
+  seeding.value = true;
+  try {
+    const response = await fetch('/api/seed', {
+      method: 'POST'
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to seed database');
+    }
+    
+    const result = await response.json();
+    console.log('Seed result:', result);
+    alert(`✅ ${result.message}\n${result.count} serviços foram adicionados!`);
+    
+    // Reload services
+    await fetchServices();
+  } catch (e) {
+    console.error('Error seeding database:', e);
+    alert('❌ Erro ao popular banco de dados: ' + e.message);
+  } finally {
+    seeding.value = false;
+  }
+};
 
 const editService = (service) => {
   editingService.value = service;

@@ -43,18 +43,37 @@ export function useServices() {
           services.value = localServices;
         }
       } else {
-        // Use API in production
+        // Use API in production with timeout
         console.log('Fetching services from API...');
-        const response = await fetch(API_URL);
-        console.log('API Response status:', response.status);
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error:', errorText);
-          throw new Error(`Failed to fetch services: ${response.status}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.error('Request timeout after 10 seconds');
+          controller.abort();
+        }, 10000); // 10 second timeout
+        
+        try {
+          const response = await fetch(API_URL, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          console.log('API Response status:', response.status);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API Error:', errorText);
+            throw new Error(`Failed to fetch services: ${response.status} - ${errorText}`);
+          }
+          const data = await response.json();
+          console.log('Services fetched:', data.length);
+          services.value = data;
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          if (fetchError.name === 'AbortError') {
+            throw new Error('Request timeout - API não respondeu em 10 segundos. Verifique se o seed foi executado.');
+          }
+          throw fetchError;
         }
-        const data = await response.json();
-        console.log('Services fetched:', data.length);
-        services.value = data;
       }
     } catch (e) {
       error.value = e.message;
