@@ -44,9 +44,17 @@ export function useServices() {
         }
       } else {
         // Use API in production
+        console.log('Fetching services from API...');
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('Failed to fetch services');
-        services.value = await response.json();
+        console.log('API Response status:', response.status);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', errorText);
+          throw new Error(`Failed to fetch services: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Services fetched:', data.length);
+        services.value = data;
       }
     } catch (e) {
       error.value = e.message;
