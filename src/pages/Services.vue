@@ -197,16 +197,23 @@ onMounted(() => {
 const seedDatabase = async () => {
   seeding.value = true;
   try {
+    console.log('Calling /api/seed...');
     const response = await fetch('/api/seed', {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
     
+    console.log('Seed response status:', response.status);
+    const responseText = await response.text();
+    console.log('Seed response text:', responseText);
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to seed database');
+      throw new Error(`Seed failed: ${response.status} - ${responseText}`);
     }
     
-    const result = await response.json();
+    const result = JSON.parse(responseText);
     console.log('Seed result:', result);
     alert(`✅ ${result.message}\n${result.count} serviços foram adicionados!`);
     

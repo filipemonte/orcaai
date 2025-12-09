@@ -1,15 +1,18 @@
 import { getRedisClient, SERVICES_KEY } from './lib/redis.js';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
-console.log('[Seed] Loading services data from file...');
-const servicesData = JSON.parse(
-  readFileSync(join(process.cwd(), 'src', 'data', 'services.json'), 'utf-8')
-);
-console.log('[Seed] Loaded', servicesData.length, 'services from file');
 
 export default async function handler(req, res) {
   console.log('[API /seed] Request method:', req.method);
+  
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    console.log('[API /seed] OPTIONS request - returning 200');
+    return res.status(200).end();
+  }
   
   // Only allow POST method
   if (req.method !== 'POST') {
@@ -32,6 +35,21 @@ export default async function handler(req, res) {
         message: 'Services already exist in Redis. Use force=true to overwrite.',
         count: count 
       });
+    }
+    
+    // Get services data from request body or use default
+    let servicesData = req.body?.services;
+    
+    if (!servicesData || !Array.isArray(servicesData)) {
+      console.log('[API /seed] No services provided in body, using default data...');
+      // Default minimal services for quick seed
+      servicesData = [
+        {"id":100001,"name":"Massa corrida reboco","unit":"m²","price":17.6},
+        {"id":100002,"name":"Massa corrida drywall","unit":"m²","price":14},
+        {"id":100003,"name":"Pintura parede interna PVA","unit":"m²","price":10.5},
+        {"id":100004,"name":"Pintura parede interna acrílica","unit":"m²","price":13},
+        {"id":100005,"name":"Pintura parede externa acrílica","unit":"m²","price":14.8}
+      ];
     }
     
     // Seed the data
